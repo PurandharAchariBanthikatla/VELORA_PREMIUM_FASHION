@@ -12,8 +12,8 @@ metadata:
 data:
   NODE_ENV: "production"
   PORT: "3000"
-  PUBLIC_APP_URL: "https://shop.example.com"
-  CORS_ORIGINS: "https://shop.example.com"
+  PUBLIC_APP_URL: "https://velora.purandhardevops.online"
+  CORS_ORIGINS: "https://velora.purandhardevops.online"
   SHIPPING_FEE: "299"
   RETURN_WINDOW_DAYS: "7"
   APP_VERSION: "3.0.0"
