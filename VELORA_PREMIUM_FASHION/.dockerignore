@@ -1,0 +1,17 @@
+node_modules
+npm-debug.log
+.git
+.github
+.env
+.env.*
+!.env.example
+*.log
+backend/data/db.json
+backend/test
+k8s
+helm
+DEPLOYMENT_PRODUCTION.md
+README.md
+*.md
+.dockerignore
+Dockerfile

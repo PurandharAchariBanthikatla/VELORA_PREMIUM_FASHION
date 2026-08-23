@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VELORA — Premium Fashion &amp; Lifestyle</title>
+    <meta name="description" content="VELORA — Premium Fashion & Lifestyle. Discover curated collections in menswear, womenswear, footwear, and sarees." />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%233a1250'/%3E%3Cstop offset='1' stop-color='%23c9a24b'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='20' fill='url(%23g)'/%3E%3Ctext x='50' y='66' font-size='54' font-family='Georgia,serif' fill='white' text-anchor='middle'%3EV%3C/text%3E%3C/svg%3E" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Jost:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+    <script defer src="shared.js"></script>
+    <script defer src="app.js"></script>
+  </head>
+  <body>
+    <div id="loader">
+      <div class="loader-logo">VELORA</div>
+      <div class="loader-bar"><div class="loader-progress"></div></div>
+    </div>
+
+    <div id="toast" aria-live="polite"></div>
+
+    <div id="loginOverlay" aria-hidden="true">
+      <section class="login-box" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+        <div class="login-logo">VELORA</div>
+        <div class="login-tagline">Premium Fashion &amp; Lifestyle</div>
+        <div class="login-tabs">
+          <button class="login-tab active" type="button" data-auth-tab="login">Sign In</button>
+          <button class="login-tab" type="button" data-auth-tab="register">Create Account</button>
+        </div>
+
+        <form class="form-panel active" id="loginForm">
+          <h2 id="loginTitle" class="sr-only">Sign in</h2>
+          <label class="form-group">
+            Email Address
+            <input type="email" id="loginEmail" autocomplete="email" placeholder="your@email.com" required />
+          </label>
+          <label class="form-group">
+            Password
+            <input type="password" id="loginPassword" autocomplete="current-password" placeholder="Password" required />
+          </label>
+          <button class="btn-primary" type="submit">Enter VELORA</button>
+          <p class="login-error" id="loginError">Invalid email or password.</p>
+          <p class="guest-link"><button type="button" id="forgotPasswordLink" class="link-btn">Forgot password?</button></p>
+          <p class="guest-link">Continue as <button type="button" id="guestButton">Guest</button></p>
+        </form>
+
+        <form class="form-panel" id="registerForm">
+          <label class="form-group">
+            Full Name
+            <input type="text" id="regName" autocomplete="name" placeholder="Your name" required />
+          </label>
+          <label class="form-group">
+            Email Address
+            <input type="email" id="regEmail" autocomplete="email" placeholder="your@email.com" required />
+          </label>
+          <label class="form-group">
+            Password
+            <input type="password" id="regPassword" autocomplete="new-password" placeholder="Create password" required />
+          </label>
+          <button class="btn-primary" type="submit">Create Account</button>
+          <p class="login-error" id="registerError">This email is already registered.</p>
+        </form>
+
+        <form class="form-panel" id="forgotForm">
+          <h2 class="sr-only">Reset password</h2>
+          <p class="forgot-copy">Enter your account email and we'll send a link to reset your password.</p>
+          <label class="form-group">
+            Email Address
+            <input type="email" id="forgotEmail" autocomplete="email" placeholder="your@email.com" required />
+          </label>
+          <button class="btn-primary" type="submit">Send Reset Link</button>
+          <p class="login-error" id="forgotError"></p>
+          <p class="login-success" id="forgotSuccess"></p>
+          <p class="guest-link"><button type="button" id="backToLoginLink" class="link-btn">Back to sign in</button></p>
+        </form>
+      </section>
+    </div>
+
+    <div class="panel-overlay" id="panelOverlay"></div>
+
+    <aside class="side-panel" id="cartPanel" aria-hidden="true">
+      <div class="panel-header">
+        <h2 class="panel-title">Shopping Bag</h2>
+        <button class="panel-close" type="button" data-close-panel aria-label="Close">x</button>
+      </div>
+      <div class="panel-body" id="cartBody"></div>
+      <div class="panel-footer" id="cartFooter"></div>
+    </aside>
+
+    <aside class="side-panel" id="wishlistPanel" aria-hidden="true">
+      <div class="panel-header">
+        <h2 class="panel-title">Wishlist</h2>
+        <button class="panel-close" type="button" data-close-panel aria-label="Close">x</button>
+      </div>
+      <div class="panel-body" id="wishlistBody"></div>
+    </aside>
+
+    <aside class="side-panel" id="ordersPanel" aria-hidden="true">
+      <div class="panel-header">
+        <h2 class="panel-title">My Orders</h2>
+        <button class="panel-close" type="button" data-close-panel aria-label="Close">x</button>
+      </div>
+      <div class="panel-body" id="ordersBody"></div>
+    </aside>
+
+    <aside class="side-panel" id="checkoutPanel" aria-hidden="true">
+      <div class="panel-header">
+        <h2 class="panel-title">Checkout</h2>
+        <button class="panel-close" type="button" data-close-panel aria-label="Close">x</button>
+      </div>
+      <form class="panel-body" id="checkoutForm"></form>
+      <div class="panel-footer" id="checkoutFooter"></div>
+    </aside>
+
+    <div class="product-detail-overlay" id="productDetail" aria-hidden="true">
+      <div class="detail-shell">
+        <button class="detail-close" type="button" id="detailClose" aria-label="Close product">x</button>
+        <div class="product-detail-box" id="detailBox"></div>
+      </div>
+    </div>
+
+    <div class="promo-banner">Complimentary shipping and returns on all orders - <span>New collection now available</span></div>
+
+    <nav class="site-nav">
+      <div class="nav-left">
+        <a class="nav-logo" href="#top">VELORA</a>
+        <button class="nav-link" type="button" data-filter="men">Men</button>
+        <button class="nav-link" type="button" data-filter="women">Women</button>
+        <button class="nav-link" type="button" data-filter="shoes">Shoes</button>
+        <button class="nav-link" type="button" data-filter="saree">Saree</button>
+      </div>
+      <div class="nav-right">
+        <div class="user-greeting" id="userGreeting"></div>
+        <button class="nav-icon-btn" type="button" id="ordersButton">Orders <span class="badge" id="ordersBadge">0</span></button>
+        <button class="nav-icon-btn" type="button" id="wishlistButton">Wishlist <span class="badge" id="wishBadge">0</span></button>
+        <button class="nav-icon-btn" type="button" id="cartButton">Bag <span class="badge" id="cartBadge">0</span></button>
+        <button id="themeToggle" type="button" aria-label="Toggle theme">Moon</button>
+        <button class="nav-link" id="authButton" type="button">Sign In</button>
+      </div>
+    </nav>
+
+    <main id="top">
+      <section class="hero">
+        <div class="hero-bg"></div>
+        <div class="hero-pattern"></div>
+        <div class="hero-content">
+          <p class="hero-label">New Collection 2026</p>
+          <h1 class="hero-title">Elevate Your<br /><em>Everyday Luxury</em></h1>
+          <p class="hero-sub">Curated fashion &amp; lifestyle - designed to move with you</p>
+          <a class="hero-cta" href="#collections">Explore Collection</a>
+        </div>
+      </section>
+
+      <section class="filters" id="collections">
+        <div class="filter-tabs">
+          <button class="filter-btn active" type="button" data-filter="all">All</button>
+          <button class="filter-btn" type="button" data-filter="men">Men</button>
+          <button class="filter-btn" type="button" data-filter="women">Women</button>
+          <button class="filter-btn" type="button" data-filter="shoes">Shoes</button>
+          <button class="filter-btn" type="button" data-filter="saree">Saree</button>
+        </div>
+        <div class="filter-right">
+          <label class="search-wrap">
+            <span class="sr-only">Search</span>
+            <input type="search" id="searchInput" placeholder="Search" />
+            <span class="search-icon">⌕</span>
+          </label>
+          <select class="sort-select" id="sortSelect" aria-label="Sort products">
+            <option value="featured">Featured</option>
+            <option value="price-asc">Price: Low-High</option>
+            <option value="price-desc">Price: High-Low</option>
+            <option value="name-asc">Name A-Z</option>
+            <option value="discount-desc">Best Discount</option>
+          </select>
+        </div>
+      </section>
+
+      <section class="products-section">
+        <div class="section-header" data-reveal>
+          <h2 class="section-title" id="collectionTitle">Collections</h2>
+          <span class="section-count" id="productCount">Loading pieces</span>
+        </div>
+        <div class="products-grid" id="productsGrid" aria-live="polite"></div>
+      </section>
+    </main>
+
+    <footer data-reveal>
+      <div class="footer-grid">
+        <div><div class="footer-logo">VELORA</div></div>
+        <div>
+          <h3 class="footer-col-title">Collections</h3>
+          <button class="footer-link" type="button" data-filter="women">Women's Fashion</button>
+          <button class="footer-link" type="button" data-filter="men">Men's Fashion</button>
+          <button class="footer-link" type="button" data-filter="shoes">Shoes</button>
+          <button class="footer-link" type="button" data-filter="saree">Saree</button>
+        </div>
+        <div>
+          <h3 class="footer-col-title">Services</h3>
+          <span class="footer-link">Personalization</span>
+          <span class="footer-link">Gift Wrapping</span>
+          <span class="footer-link">Alterations</span>
+          <a class="footer-link" href="returns-policy.html">Returns</a>
+          <a class="footer-link" href="shipping-policy.html">Shipping</a>
+        </div>
+        <div>
+          <h3 class="footer-col-title">VELORA</h3>
+          <span class="footer-link">Our Story</span>
+          <span class="footer-link">Craftsmanship</span>
+          <span class="footer-link">Sustainability</span>
+          <span class="footer-link">Contact</span>
+        </div>
+        <div>
+          <h3 class="footer-col-title">Legal</h3>
+          <a class="footer-link" href="privacy.html">Privacy Policy</a>
+          <a class="footer-link" href="terms.html">Terms of Service</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>2026 VELORA Premium Fashion &amp; Lifestyle. Demo storefront.</span>
+        <span>Paris - Milan - New York - Tokyo</span>
+      </div>
+    </footer>
+  </body>
+</html>

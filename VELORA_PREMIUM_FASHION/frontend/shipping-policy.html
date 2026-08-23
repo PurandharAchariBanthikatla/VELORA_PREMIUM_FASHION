@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Shipping methods, timelines, and fees for VELORA orders." />
+    <title>Shipping Policy - VELORA</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Jost:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="toast" aria-live="polite"></div>
+    <div class="legal-page">
+      <div class="legal-nav"><a href="index.html">← Back to VELORA</a></div>
+      <h1>Shipping Policy</h1>
+      <p class="updated">Last updated: 2026</p>
+
+      <h2>1. Processing time</h2>
+      <p>Orders are processed once payment is confirmed, usually within 1–2 business days before being handed to our shipping partner.</p>
+
+      <h2>2. Shipping fees and free shipping</h2>
+      <p>Shipping is calculated at checkout. Orders above the store's free-shipping threshold ship at no extra cost — the current threshold is shown in your cart and at checkout.</p>
+
+      <h2>3. Delivery timelines</h2>
+      <p>Typical delivery is 3–7 business days domestically, depending on your location. You can track progress at any time from <strong>My Account → My Orders</strong>, which shows a status timeline (confirmed → processing → shipped → delivered) for every order.</p>
+
+      <h2>4. Order status &amp; notifications</h2>
+      <p>You'll get an email whenever your order's status changes, and every update also appears in your account's Notifications feed.</p>
+
+      <h2>5. Address accuracy</h2>
+      <p>Please double-check your shipping address at checkout — we ship to the address on the order and can't guarantee changes once an order has moved to "processing".</p>
+
+      <h2>6. Lost or delayed shipments</h2>
+      <p>If your order hasn't arrived within the expected window, contact support with your order number and we'll investigate with our shipping partner.</p>
+
+      <h2>7. Contact us</h2>
+      <p>Questions about a shipment can be sent to <span id="supportEmail">support@velora.com</span> or via a support ticket from your account.</p>
+    </div>
+    <script src="shared.js"></script>
+    <script>
+      fetch((window.VELORA_API_BASE || "") + "/api/store/settings").then(r => r.json()).then(d => {
+        if (d?.settings?.supportEmail) document.getElementById("supportEmail").textContent = d.settings.supportEmail;
+      }).catch(() => {});
+    </script>
+  </body>
+</html>

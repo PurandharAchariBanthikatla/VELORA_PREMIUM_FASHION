@@ -1,0 +1,38 @@
+VELORA has been deployed as "{{ .Release.Name }}" in namespace "{{ .Release.Namespace }}".
+
+{{- if .Values.ingress.enabled }}
+
+It should become reachable at:
+{{- range .Values.ingress.hosts }}
+  https://{{ .host }}
+{{- end }}
+(allow a few minutes for DNS + cert-manager to issue the TLS certificate)
+{{- else }}
+
+Ingress is disabled. Reach the app with:
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "velora.fullname" . }} 8080:{{ .Values.service.port }}
+{{- end }}
+
+Check rollout status:
+  kubectl -n {{ .Release.Namespace }} rollout status deployment/{{ include "velora.fullname" . }}
+
+Check pod health:
+  kubectl -n {{ .Release.Namespace }} get pods -l {{ include "velora.selectorLabels" . | replace "\n" "," }}
+
+{{- if not .Values.secrets.create }}
+{{- if not .Values.secrets.existingSecret }}
+
+WARNING: secrets.create is false and secrets.existingSecret is empty — the
+Deployment references a Secret named "{{ include "velora.fullname" . }}" that
+this release did NOT create. Create it yourself before pods will start:
+
+  kubectl -n {{ .Release.Namespace }} create secret generic {{ include "velora.fullname" . }} \
+    --from-literal=DATABASE_URL=... \
+    --from-literal=JWT_SECRET=$(openssl rand -hex 32) \
+    --from-literal=JWT_REFRESH_SECRET=$(openssl rand -hex 32) \
+    --from-literal=STRIPE_SECRET_KEY=... \
+    --from-literal=STRIPE_WEBHOOK_SECRET=... \
+    --from-literal=SMTP_USER=... \
+    --from-literal=SMTP_PASS=...
+{{- end }}
+{{- end }}

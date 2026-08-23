@@ -1,0 +1,163 @@
+# Default values for velora — these are the production defaults.
+# See values-staging.yaml for a smaller-footprint override file
+# (helm install -f values.yaml -f values-staging.yaml ...).
+
+replicaCount: 3
+
+image:
+  repository: ""     # e.g. 123456789012.dkr.ecr.ap-south-1.amazonaws.com/velora
+  tag: ""             # e.g. the CI-built git SHA or semver tag — set explicitly, never "latest"
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+# Pod-level security context (applies to all containers in the pod).
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 100          # matches the "velora" user created in the Dockerfile (alpine addgroup/adduser default UID)
+  runAsGroup: 101
+  fsGroup: 101
+  seccompProfile:
+    type: RuntimeDefault
+
+# Container-level security context.
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    # Personalized/private API responses (auth, account, orders, admin, cart,
+    # coupon validation) must never be cached by a shared/edge cache — this
+    # is enforced at the application layer (see the noStore middleware in
+    # app.js), but the annotation is set here too as defense-in-depth for
+    # any ingress-level caching layer that might be added later.
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+  hosts:
+    - host: shop.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: velora-tls
+      hosts:
+        - shop.example.com
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+  limits:
+    cpu: 1000m
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+networkPolicy:
+  enabled: true
+  # Egress to Postgres/Redis/S3/Stripe/SMTP — adjust CIDRs/ports for your
+  # actual managed-service endpoints. Deny-by-default otherwise.
+  postgresPort: 5432
+  redisPort: 6379
+  allowDNS: true
+
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0   # never drop below full desired capacity during a rollout
+
+terminationGracePeriodSeconds: 30
+
+probes:
+  liveness:
+    path: /api/live
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 3
+  readiness:
+    path: /api/health
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 3
+  startup:
+    path: /api/live
+    periodSeconds: 5
+    failureThreshold: 30   # up to 150s for migrations to run on cold start
+
+# Non-secret configuration, rendered into a ConfigMap and mounted as env vars.
+config:
+  NODE_ENV: production
+  PORT: "3000"
+  PUBLIC_APP_URL: "https://shop.example.com"
+  CORS_ORIGINS: "https://shop.example.com"
+  SHIPPING_FEE: "299"
+  RETURN_WINDOW_DAYS: "7"
+  APP_VERSION: "3.0.0"
+  AWS_REGION: "ap-south-1"
+  S3_BUCKET: "velora-product-media"
+  S3_PUBLIC_BASE_URL: "https://cdn.example.com"
+  SMTP_PORT: "587"
+  SMTP_FROM: "VELORA <no-reply@example.com>"
+
+# Secret values. In a real deployment these should NOT be set via
+# `--set` or committed values files — use `--set-file`, a sealed-secrets/
+# external-secrets operator, or `helm install --set secrets.xxx=$XXX` from
+# a CI secret store. secrets.create=false lets you instead point
+# existingSecret at a Secret you manage out-of-band.
+secrets:
+  create: false
+  existingSecret: ""
+  # Keys expected in the Secret (whether chart-created or existing):
+  #   DATABASE_URL, JWT_SECRET, JWT_REFRESH_SECRET, STRIPE_SECRET_KEY,
+  #   STRIPE_WEBHOOK_SECRET, SMTP_USER, SMTP_PASS, SENTRY_DSN, REDIS_URL
+  # REDIS_URL is required in production — see backend/services/redis.service.js.
+  # It backs cross-replica rate limiting and access-token revocation, which
+  # this chart's NetworkPolicy (see redisPort below) already assumes exists.
+  values: {}
+
+serviceMonitor:
+  enabled: false
+  interval: 30s
+  path: /api/health
+  labels: {}
+
+namespace:
+  # Most teams create the namespace with `helm install --create-namespace`
+  # or manage it via a separate platform/GitOps repo. This is here so the
+  # chart can also be fully self-contained if you'd rather manage it here —
+  # off by default to avoid two owners fighting over the same object.
+  create: false

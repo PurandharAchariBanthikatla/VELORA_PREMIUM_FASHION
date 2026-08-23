@@ -1,0 +1,68 @@
+{{- if .Values.networkPolicy.enabled -}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "velora.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "velora.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "velora.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Only the ingress controller (and anything else in-namespace, e.g. a
+    # future sidecar/debug pod) may reach the app port. Adjust the
+    # namespaceSelector label to match your actual ingress-nginx/ALB
+    # controller namespace.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.service.targetPort }}
+  egress:
+    {{- if .Values.networkPolicy.allowDNS }}
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    {{- end }}
+    # Managed Postgres / Redis — same-cluster or via a private endpoint.
+    # If your database is fully external (RDS, Cloud SQL, etc.) reachable
+    # only over the internet, replace these two rules with the HTTPS-style
+    # "allow all egress on that port" rule below instead.
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.networkPolicy.postgresPort }}
+        - protocol: TCP
+          port: {{ .Values.networkPolicy.redisPort }}
+    # Stripe / S3 / SMTP / Sentry are external, internet-hosted services —
+    # NetworkPolicy can't scope egress to a hostname, only IP/CIDR, so this
+    # allows outbound HTTPS (and SMTP submission) to any destination. If
+    # your CNI supports FQDN-based egress policies (e.g. Cilium
+    # CiliumNetworkPolicy, or AWS Network Firewall in front of the NAT
+    # gateway), tighten this to the specific provider domains instead.
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 169.254.169.254/32   # block the cloud metadata endpoint — SSRF hardening
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 587
+        - protocol: TCP
+          port: 465
+{{- end -}}

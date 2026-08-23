@@ -1,0 +1,45 @@
+# Staging overrides — smaller footprint, no strict rolling-update guarantee,
+# relaxed but not absent security posture. Use with:
+#   helm install velora ./helm/velora -f values.yaml -f values-staging.yaml -n velora-staging
+
+replicaCount: 1
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+
+podDisruptionBudget:
+  enabled: false
+
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 1
+
+ingress:
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-staging
+  hosts:
+    - host: staging.shop.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: velora-staging-tls
+      hosts:
+        - staging.shop.example.com
+
+config:
+  NODE_ENV: production   # the app's own hardening checks (JWT/SMTP/CORS) are meant to run in staging too
+  PUBLIC_APP_URL: "https://staging.shop.example.com"
+  CORS_ORIGINS: "https://staging.shop.example.com"

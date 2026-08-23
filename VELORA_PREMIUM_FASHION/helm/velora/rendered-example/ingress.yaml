@@ -1,0 +1,33 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: velora
+  namespace: velora
+  labels:
+    helm.sh/chart: velora-1.0.0
+    app.kubernetes.io/name: velora
+    app.kubernetes.io/instance: velora
+    app.kubernetes.io/version: "3.0.0"
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - "shop.example.com"
+      secretName: velora-tls
+  rules:
+    - host: "shop.example.com"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: velora
+                port:
+                  number: 80

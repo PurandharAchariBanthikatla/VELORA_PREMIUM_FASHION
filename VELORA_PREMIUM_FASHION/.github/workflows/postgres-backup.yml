@@ -1,0 +1,83 @@
+name: Velora Postgres Backup
+
+on:
+  schedule:
+    - cron: '17 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    # id-token: write is required for OIDC role assumption below — this
+    # replaces long-lived AWS access keys (aws-access-key-id/secret) with
+    # short-lived, auto-rotating credentials scoped to exactly the S3
+    # actions this role needs. Long-lived keys stored as repo secrets are
+    # a much larger blast radius if ever leaked and don't auto-expire.
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_BACKUP_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - uses: tj-actions/install-pgclient@v3
+        with: { version: '16' }
+
+      - name: Run backup
+        id: backup
+        run: ./scripts/backup-postgres.sh
+        env:
+          DATABASE_URL: ${{ secrets.VELORA_DATABASE_URL }}
+          S3_BACKUP_BUCKET: ${{ secrets.VELORA_BACKUP_BUCKET }}
+
+      - name: Alert on failure
+        if: failure()
+        run: |
+          curl -sf -X POST "${{ secrets.ALERT_WEBHOOK_URL }}" \
+            -H 'Content-Type: application/json' \
+            -d '{"text":"⚠️ Velora nightly Postgres backup FAILED — see run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}' \
+          || echo "Alert webhook also failed — check ALERT_WEBHOOK_URL secret. The GitHub Actions run itself is still marked failed and visible in the Actions tab."
+
+  # A backup nobody ever restores from isn't verified — run the actual
+  # restore drill on a schedule (weekly, offset from the nightly backup)
+  # against a throwaway database, exactly like the one performed manually
+  # during the Phase 5 production-readiness review, and fail loudly if it
+  # doesn't come back with the expected tables/row counts.
+  restore-drill:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 3 * * 1'
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_BACKUP_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - uses: tj-actions/install-pgclient@v3
+        with: { version: '16' }
+
+      - name: Find latest backup
+        id: latest
+        run: |
+          LATEST=$(aws s3 ls "s3://${{ secrets.VELORA_BACKUP_BUCKET }}/postgres/" | sort | tail -n 1 | awk '{print $4}')
+          echo "key=postgres/${LATEST}" >> "$GITHUB_OUTPUT"
+
+      - name: Restore into a throwaway database and verify
+        run: |
+          ./scripts/restore-postgres.sh \
+            "s3://${{ secrets.VELORA_BACKUP_BUCKET }}/${{ steps.latest.outputs.key }}" \
+            "${{ secrets.VELORA_RESTORE_DRILL_DATABASE_URL }}"
+
+      - name: Alert on failure
+        if: failure()
+        run: |
+          curl -sf -X POST "${{ secrets.ALERT_WEBHOOK_URL }}" \
+            -H 'Content-Type: application/json' \
+            -d '{"text":"⚠️ Velora weekly restore drill FAILED — the last backup may not actually be restorable. See run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}' \
+          || true

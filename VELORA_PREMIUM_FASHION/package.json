@@ -1,0 +1,48 @@
+{
+  "name": "velora-premium-fashion-lifestyle",
+  "version": "2.0.0",
+  "description": "VELORA — Premium Fashion & Lifestyle ecommerce platform with an Express + PostgreSQL backend.",
+  "main": "backend/server.js",
+  "type": "module",
+  "scripts": {
+    "import:products": "node backend/scripts/importProducts.mjs",
+    "build": "npm run import:products",
+    "db:migrate": "node backend/db/migrate.js",
+    "db:seed": "node backend/db/seed.js",
+    "check": "node --check backend/app.js && node --check backend/server.js && node --check backend/scripts/importProducts.mjs && node --check backend/db/pool.js && node --check backend/db/migrate.js && node --check backend/db/seed.js && node --check backend/db/repositories/users.repo.js && node --check backend/db/repositories/products.repo.js && node --check backend/db/repositories/orders.repo.js && node --check backend/db/repositories/audit.repo.js && node --check backend/db/repositories/reviews.repo.js && node --check backend/db/repositories/returns.repo.js && node --check backend/db/repositories/support.repo.js && node --check backend/services/redis.service.js && node --check backend/services/invoice.service.js && node --check backend/routes/support.routes.js && node --check backend/middleware/cache.js && node --check frontend/app.js && node --check frontend/shared.js && node --check frontend/account.js && node --check frontend/admin/admin.js",
+    "start": "node backend/server.js",
+    "dev": "node backend/server.js",
+    "test": "node --test backend/test/*.test.mjs",
+    "mirror:images": "node backend/scripts/mirrorImages.mjs",
+    "backup:db": "./scripts/backup-postgres.sh",
+    "restore:db": "./scripts/restore-postgres.sh",
+    "e2e": "playwright test",
+    "stress:rate": "node backend/scripts/stress-rate-limit.mjs",
+    "stress:coupon": "node backend/scripts/stress-coupon.mjs"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.888.0",
+    "@aws-sdk/lib-storage": "^3.888.0",
+    "@sentry/node": "^10.0.0",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^8.6.2",
+    "helmet": "^8.3.0",
+    "ioredis": "^5.4.1",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.2.0",
+    "nodemailer": "^9.0.5",
+    "pdfkit": "^0.15.0",
+    "pg": "^8.23.0",
+    "rate-limit-redis": "^4.2.0",
+    "stripe": "^18.5.0",
+    "zod": "^4.0.5"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "playwright": "^1.62.1"
+  }
+}

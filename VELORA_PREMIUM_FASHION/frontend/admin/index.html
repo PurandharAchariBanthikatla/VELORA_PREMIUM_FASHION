@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Dashboard - VELORA</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%233a1250'/%3E%3Cstop offset='1' stop-color='%23c9a24b'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='20' fill='url(%23g)'/%3E%3Ctext x='50' y='66' font-size='54' font-family='Georgia,serif' fill='white' text-anchor='middle'%3EV%3C/text%3E%3C/svg%3E" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Jost:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body>
+    <div id="toast" aria-live="polite"></div>
+
+    <div class="dash-shell">
+      <aside class="dash-sidebar">
+        <div class="dash-logo">VELORA</div>
+        <div class="dash-subtitle">Admin Panel</div>
+        <button class="dash-nav-link active" data-view="overview">Dashboard</button>
+        <button class="dash-nav-link" data-view="products">Products</button>
+        <button class="dash-nav-link" data-view="categories">Categories</button>
+        <button class="dash-nav-link" data-view="orders">Orders</button>
+        <button class="dash-nav-link" data-view="customers">Customers</button>
+        <button class="dash-nav-link" data-view="inventory">Inventory</button>
+        <button class="dash-nav-link" data-view="analytics">Analytics</button>
+        <button class="dash-nav-link" data-view="coupons">Coupons</button>
+        <button class="dash-nav-link" data-view="reviews">Reviews</button>
+        <button class="dash-nav-link" data-view="returns">Returns</button>
+        <button class="dash-nav-link" data-view="support">Support</button>
+        <button class="dash-nav-link" data-view="settings">Settings</button>
+        <button class="dash-nav-link" data-view="activity">Activity Log</button>
+        <div class="dash-nav-footer">
+          <a class="dash-nav-link" href="../index.html">← Back to Store</a>
+          <button class="dash-nav-link" id="logoutBtn">Sign Out</button>
+        </div>
+      </aside>
+
+      <main class="dash-main">
+        <div class="dash-header">
+          <div>
+            <h1 id="pageTitle">Dashboard Overview</h1>
+            <p id="adminName"></p>
+          </div>
+        </div>
+
+        <!-- Overview -->
+        <section class="dash-section" id="view-overview">
+          <div class="dash-cards">
+            <div class="dash-card"><div class="label">Total Revenue</div><div class="value" id="statRevenue">₹0</div></div>
+            <div class="dash-card"><div class="label">Total Orders</div><div class="value" id="statOrders">0</div></div>
+            <div class="dash-card"><div class="label">Customers</div><div class="value" id="statCustomers">0</div></div>
+            <div class="dash-card"><div class="label">Products</div><div class="value" id="statProducts">0</div></div>
+            <div class="dash-card"><div class="label">Low Stock</div><div class="value" id="statLowStock">0</div></div>
+            <div class="dash-card"><div class="label">Active Coupons</div><div class="value" id="statCoupons">0</div></div>
+          </div>
+
+          <div class="chart-grid">
+            <div class="chart-card">
+              <h3>Revenue — Last 14 Days</h3>
+              <div class="mini-bar-chart" id="revenueChart"></div>
+            </div>
+            <div class="chart-card">
+              <h3>Orders by Status</h3>
+              <div class="mini-bar-chart" id="statusChart"></div>
+            </div>
+          </div>
+
+          <div class="dash-section">
+            <h2>Top Selling Products</h2>
+            <div class="dash-table-wrap">
+              <table class="dash-table">
+                <thead><tr><th>Product</th><th>Units Sold</th><th>Revenue</th></tr></thead>
+                <tbody id="topProductsBody"><tr><td colspan="3">Loading...</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="dash-section">
+            <h2>Recent Orders</h2>
+            <div class="dash-table-wrap">
+              <table class="dash-table">
+                <thead><tr><th>Order</th><th>Customer</th><th>Date</th><th>Total</th><th>Status</th></tr></thead>
+                <tbody id="recentOrdersBody"><tr><td colspan="5">Loading...</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- Products -->
+        <section class="dash-section" id="view-products" style="display:none">
+          <div class="dash-header">
+            <h2 style="margin:0">Product Catalog</h2>
+            <button class="btn-secondary" style="width:auto;padding:0.7rem 1.5rem" id="newProductBtn">+ Add Product</button>
+          </div>
+
+          <form class="dash-form" id="productForm" style="display:none">
+            <input type="hidden" id="productId" />
+            <label>Title <input type="text" id="pTitle" required /></label>
+            <label>Brand <input type="text" id="pBrand" /></label>
+            <label>Selling Price (₹) <input type="number" id="pSellingPrice" required min="0" /></label>
+            <label>MRP (₹) <input type="number" id="pMrp" min="0" /></label>
+            <label>Category <input type="text" id="pCategory" /></label>
+            <label>Gender
+              <select id="pGender">
+                <option>Men</option>
+                <option>Women</option>
+                <option>Unisex</option>
+              </select>
+            </label>
+            <label>Color <input type="text" id="pColor" /></label>
+            <label>Stock Quantity <input type="number" id="pStock" min="0" /></label>
+            <label class="full">Product Image
+              <div class="image-upload-row">
+                <input type="text" id="pImage" placeholder="https://... or upload a file" style="flex:1" />
+                <input type="file" id="pImageFile" accept="image/png,image/jpeg,image/webp,image/gif" />
+              </div>
+              <span id="uploadStatus" style="font-size:0.65rem;color:var(--grey);text-transform:none;letter-spacing:normal"></span>
+            </label>
+            <label class="full">Description <textarea id="pDescription" rows="2"></textarea></label>
+            <div class="dash-form-actions">
+              <button class="btn-primary" type="submit" id="productSubmitBtn">Save Product</button>
+              <button class="btn-secondary" type="button" id="cancelProductBtn">Cancel</button>
+            </div>
+            <p class="login-error" id="productMessage" style="grid-column: 1 / -1;"></p>
+          </form>
+
+          <div class="select-row">
+            <input type="search" id="productSearch" placeholder="Search products..." />
+          </div>
+
+          <div class="dash-table-wrap">
+            <table class="dash-table">
+              <thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th>Rating</th><th>Actions</th></tr></thead>
+              <tbody id="productsBody"><tr><td colspan="6">Loading...</td></tr></tbody>
+            </table>
+          </div>
+          <div class="pagination-row">
+            <button type="button" id="prevPageBtn">← Prev</button>
+            <span id="pageIndicator">Page 1 of 1</span>
+            <button type="button" id="nextPageBtn">Next →</button>
+          </div>
+        </section>
+
+        <!-- Categories -->
+        <section class="dash-section" id="view-categories" style="display:none">
+          <h2>Categories</h2>
+          <p style="color:var(--grey);font-size:0.8rem;margin-top:-0.5rem">Categories are derived from your live product catalog. Edit a product's category field to rename or regroup it.</p>
+          <div class="category-grid" id="categoryGrid" style="margin-top:1.5rem">Loading...</div>
+        </section>
+
+        <!-- Orders -->
+        <section class="dash-section" id="view-orders" style="display:none">
+          <h2>All Orders</h2>
+          <div class="select-row">
+            <select id="orderStatusFilter">
+              <option value="">All Statuses</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="processing">Processing</option>
+              <option value="shipped">Shipped</option>
+              <option value="delivered">Delivered</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+          <div class="dash-table-wrap">
+            <table class="dash-table">
+              <thead><tr><th>Order</th><th>Customer</th><th>Date</th><th>Items</th><th>Total</th><th>Status</th><th>Update</th></tr></thead>
+              <tbody id="ordersBody"><tr><td colspan="7">Loading...</td></tr></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Customers -->
+        <section class="dash-section" id="view-customers" style="display:none">
+          <h2>Customers</h2>
+          <div class="dash-table-wrap">
+            <table class="dash-table">
+              <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Orders</th><th>Total Spent</th><th>Joined</th></tr></thead>
+              <tbody id="customersBody"><tr><td colspan="6">Loading...</td></tr></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Inventory -->
+        <section class="dash-section" id="view-inventory" style="display:none">
+          <div class="dash-cards">
+            <div class="dash-card"><div class="label">Total Units</div><div class="value" id="invTotalUnits">0</div></div>
+            <div class="dash-card"><div class="label">Low Stock (≤5)</div><div class="value" id="invLowStock">0</div></div>
+            <div class="dash-card"><div class="label">Out of Stock</div><div class="value" id="invOutStock">0</div></div>
+          </div>
+          <div class="dash-toolbar">
+            <input type="search" id="inventorySearch" placeholder="Search products..." style="max-width:260px" />
+            <div class="dash-pill-tabs">
+              <button class="dash-pill-tab active" data-stock="">All</button>
+              <button class="dash-pill-tab" data-stock="low">Low Stock</button>
+              <button class="dash-pill-tab" data-stock="out">Out of Stock</button>
+            </div>
+          </div>
+          <div class="dash-table-wrap">
+            <table class="dash-table">
+              <thead><tr><th>Product</th><th>Category</th><th>Current Stock</th><th>Update Stock</th></tr></thead>
+              <tbody id="inventoryBody"><tr><td colspan="4">Loading...</td></tr></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Analytics -->
+        <section class="dash-section" id="view-analytics" style="display:none">
+          <h2>Analytics</h2>
+          <div class="chart-grid">
+            <div class="chart-card">
+              <h3>Revenue Trend</h3>
+              <div class="mini-bar-chart" id="analyticsRevenueChart"></div>
+            </div>
+            <div class="chart-card">
+              <h3>Orders by Status</h3>
+              <div class="mini-bar-chart" id="analyticsStatusChart"></div>
+            </div>
+          </div>
+          <div class="dash-table-wrap">
+            <table class="dash-table">
+              <thead><tr><th>Product</th><th>Units Sold</th><th>Revenue</th></tr></thead>
+              <tbody id="analyticsTopBody"><tr><td colspan="3">Loading...</td></tr></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Coupons -->
+        <section class="dash-section" id="view-coupons" style="display:none">
+          <div class="dash-header">
+            <h2 style="margin:0">Coupons</h2>
+            <button class="btn-secondary" style="width:auto;padding:0.7rem 1.5rem" id="newCouponBtn">+ New Coupon</button>
+          </div>
+
+          <form class="dash-form" id="couponForm" style="display:none">
+            <input type="hidden" id="couponId" />
+            <label>Code <input type="text" id="cCode" placeholder="WELCOME10" required style="text-transform:uppercase" /></label>
+            <label>Type
+              <select id="cType">
+                <option value="percent">Percent off</option>
+                <option value="fixed">Fixed amount off</option>
+              </select>
+            </label>
+            <label>Value <input type="number" id="cValue" min="0" required /></label>
+            <label>Minimum Order (₹) <input type="number" id="cMinOrder" min="0" value="0" /></label>
+            <label>Max Uses (blank = unlimited) <input type="number" id="cMaxUses" min="1" /></label>
+            <label>Expires On <input type="date" id="cExpiresAt" /></label>
+            <label style="display:flex;align-items:center;gap:0.6rem;flex-direction:row;text-transform:none;font-size:0.8rem">
+              <span class="toggle-switch"><input type="checkbox" id="cActive" checked /><span class="toggle-slider"></span></span>
+              Active
+            </label>
+            <div class="dash-form-actions">
+              <button class="btn-primary" type="submit">Save Coupon</button>
+              <button class="btn-secondary" type="button" id="cancelCouponBtn">Cancel</button>
+            </div>
+            <p class="login-error" id="couponMessage" style="grid-column: 1 / -1;"></p>
+          </form>
+
+          <div class="dash-table-wrap">
+            <table class="dash-table">
+              <thead><tr><th>Code</th><th>Type</th><th>Value</th><th>Min Order</th><th>Uses</th><th>Status</th><th>Expires</th><th>Actions</th></tr></thead>
+              <tbody id="couponsBody"><tr><td colspan="8">Loading...</td></tr></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Reviews -->
+        <section class="dash-section" id="view-reviews" style="display:none">
+          <div class="dash-toolbar">
+            <h2 style="margin:0">Product Reviews</h2>
+            <div class="dash-pill-tabs" id="reviewStatusTabs">
+              <button class="dash-pill-tab active" data-status="">All</button>
+              <button class="dash-pill-tab" data-status="published">Published</button>
+              <button class="dash-pill-tab" data-status="hidden">Hidden</button>
+            </div>
+          </div>
+          <div class="dash-table-wrap">
+            <table class="dash-table">
+              <thead><tr><th>Product</th><th>Customer</th><th>Rating</th><th>Review</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody id="reviewsBody"><tr><td colspan="6">Loading...</td></tr></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Returns -->
+        <section class="dash-section" id="view-returns" style="display:none">
+          <div class="dash-toolbar">
+            <h2 style="margin:0">Returns &amp; Refunds</h2>
+            <div class="dash-pill-tabs" id="returnStatusTabs">
+              <button class="dash-pill-tab active" data-status="">All</button>
+              <button class="dash-pill-tab" data-status="requested">Requested</button>
+              <button class="dash-pill-tab" data-status="approved">Approved</button>
+              <button class="dash-pill-tab" data-status="refunded">Refunded</button>
+              <button class="dash-pill-tab" data-status="rejected">Rejected</button>
+            </div>
+          </div>
+          <div class="dash-table-wrap">
+            <table class="dash-table">
+              <thead><tr><th>Order</th><th>Customer</th><th>Item</th><th>Qty</th><th>Reason</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody id="returnsBody"><tr><td colspan="7">Loading...</td></tr></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Support -->
+        <section class="dash-section" id="view-support" style="display:none">
+          <div class="dash-toolbar">
+            <h2 style="margin:0">Support Tickets</h2>
+            <div class="dash-pill-tabs" id="supportStatusTabs">
+              <button class="dash-pill-tab active" data-status="">All</button>
+              <button class="dash-pill-tab" data-status="open">Open</button>
+              <button class="dash-pill-tab" data-status="pending">Pending</button>
+              <button class="dash-pill-tab" data-status="closed">Closed</button>
+            </div>
+          </div>
+          <div id="adminTicketListWrap">Loading...</div>
+          <div id="adminTicketThreadWrap" style="display:none">
+            <button class="icon-btn" id="adminBackToTicketsBtn" type="button">← All tickets</button>
+            <div class="dash-toolbar" style="margin-top:1rem">
+              <h3 id="adminTicketSubject" style="margin:0"></h3>
+              <div class="dash-pill-tabs">
+                <button class="icon-btn" data-set-status="open">Reopen</button>
+                <button class="icon-btn" data-set-status="closed">Close</button>
+              </div>
+            </div>
+            <p style="color:var(--grey);font-size:0.85rem" id="adminTicketMeta"></p>
+            <div class="notif-list" id="adminTicketMessages" style="margin:1rem 0"></div>
+            <form id="adminTicketReplyForm">
+              <textarea id="adminTicketReplyBody" rows="3" placeholder="Write a reply..." required style="width:100%"></textarea>
+              <div class="dash-form-actions"><button class="btn-primary" type="submit">Send Reply</button></div>
+            </form>
+          </div>
+        </section>
+
+        <!-- Settings -->
+        <section class="dash-section" id="view-settings" style="display:none">
+          <h2>Store Settings</h2>
+          <form class="dash-form settings-grid" id="settingsForm">
+            <label>Store Name <input type="text" id="sStoreName" required /></label>
+            <label>Tagline <input type="text" id="sTagline" /></label>
+            <label>Support Email <input type="email" id="sSupportEmail" /></label>
+            <label>Support Phone <input type="text" id="sSupportPhone" /></label>
+            <label>Currency <input type="text" id="sCurrency" maxlength="3" /></label>
+            <label>Free Shipping Threshold (₹) <input type="number" id="sFreeShipping" min="0" /></label>
+            <label>Tax Percent (%) <input type="number" id="sTaxPercent" min="0" step="0.1" /></label>
+            <div class="dash-form-actions">
+              <button class="btn-primary" type="submit">Save Settings</button>
+            </div>
+            <p class="login-error" id="settingsMessage" style="grid-column: 1 / -1;"></p>
+            <p class="login-success" id="settingsSuccess" style="grid-column: 1 / -1;"></p>
+          </form>
+        </section>
+
+        <!-- Activity Log -->
+        <section class="dash-section" id="view-activity" style="display:none">
+          <h2>Recent Admin Activity</h2>
+          <div class="dash-table-wrap">
+            <table class="dash-table">
+              <thead><tr><th>When</th><th>Admin</th><th>Action</th><th>Details</th></tr></thead>
+              <tbody id="activityBody"><tr><td colspan="4">Loading...</td></tr></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="../shared.js"></script>
+    <script src="admin.js"></script>
+  </body>
+</html>

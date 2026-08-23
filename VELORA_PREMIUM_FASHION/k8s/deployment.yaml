@@ -1,0 +1,108 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: velora
+  namespace: velora
+  labels:
+    helm.sh/chart: velora-1.0.0
+    app.kubernetes.io/name: velora
+    app.kubernetes.io/instance: velora
+    app.kubernetes.io/version: "3.0.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: velora
+      app.kubernetes.io/instance: velora
+  template:
+    metadata:
+      annotations:
+        checksum/config: "b7e2c1f0a9d8e6f4c3b2a1908f7e6d5c4b3a2f1e0d9c8b7a6f5e4d3c2b1a0f9e"
+      labels:
+        helm.sh/chart: velora-1.0.0
+        app.kubernetes.io/name: velora
+        app.kubernetes.io/instance: velora
+        app.kubernetes.io/version: "3.0.0"
+        app.kubernetes.io/managed-by: Helm
+    spec:
+      serviceAccountName: velora
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 100
+        runAsGroup: 101
+        fsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: velora
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          image: "123456789012.dkr.ecr.ap-south-1.amazonaws.com/velora:v1.0.0"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: velora
+            - secretRef:
+                name: velora
+          env:
+            - name: SHUTDOWN_TIMEOUT_MS
+              value: "10000"
+          livenessProbe:
+            httpGet:
+              path: /api/live
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /api/live
+              port: http
+            periodSeconds: 5
+            failureThreshold: 30
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 512Mi
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: velora
+                    app.kubernetes.io/instance: velora
+                topologyKey: kubernetes.io/hostname

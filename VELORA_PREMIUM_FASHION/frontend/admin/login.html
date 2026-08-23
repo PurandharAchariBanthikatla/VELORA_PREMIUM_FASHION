@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Login - VELORA</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Jost:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body>
+    <div id="toast" aria-live="polite"></div>
+    <div class="dash-login-shell">
+      <div class="dash-login-box">
+        <div class="dash-logo">VELORA</div>
+        <p class="dash-subtitle" style="color:var(--grey)">Admin Control Panel</p>
+        <form id="adminLoginForm">
+          <label class="form-group">Email Address
+            <input type="email" id="email" value="admin@velora.com" required />
+          </label>
+          <label class="form-group">Password
+            <input type="password" id="password" placeholder="Password" required />
+          </label>
+          <button class="btn-primary" type="submit">Sign In to Admin</button>
+          <p class="login-error" id="loginError"></p>
+        </form>
+        <p style="margin-top:1.5rem;font-size:0.7rem;color:var(--grey)">Default: admin@velora.com / Admin@123</p>
+        <a class="back-to-store" href="../index.html" style="display:block;margin-top:1rem">← Back to Store</a>
+      </div>
+    </div>
+    <script src="../shared.js"></script>
+    <script>
+      const { auth, api } = window.Velora;
+      const existingUser = auth.getUser();
+      if (auth.getAccessToken() && existingUser?.role === "admin") {
+        window.location.href = "index.html";
+      }
+
+      document.getElementById("adminLoginForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const errorEl = document.getElementById("loginError");
+        errorEl.style.display = "none";
+        try {
+          const data = await api("/api/auth/login", {
+            method: "POST",
+            skipAuth: true,
+            body: {
+              email: document.getElementById("email").value.trim(),
+              password: document.getElementById("password").value
+            }
+          });
+          if (data.user.role !== "admin") throw new Error("This account does not have admin access.");
+          auth.setSession(data);
+          window.location.href = "index.html";
+        } catch (error) {
+          errorEl.textContent = error.message;
+          errorEl.style.display = "block";
+        }
+      });
+    </script>
+  </body>
+</html>

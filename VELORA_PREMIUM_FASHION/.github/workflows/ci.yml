@@ -1,0 +1,240 @@
+name: Velora CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: 22
+
+jobs:
+  # ---------------------------------------------------------------------
+  # 1. Lint + syntax check. There's no TypeScript in this codebase (plain
+  #    ESM JS), so "type checks" here means the project's own `npm run
+  #    check` (node --check across every entrypoint) rather than tsc.
+  # ---------------------------------------------------------------------
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - name: Syntax check every entrypoint
+        run: npm run check
+
+  # ---------------------------------------------------------------------
+  # 2. Unit + integration tests against a REAL PostgreSQL service
+  #    container — not mocked. Fails the build on any regression. Runs
+  #    the suite twice to also catch schema-reset/idempotency regressions.
+  # ---------------------------------------------------------------------
+  test:
+    runs-on: ubuntu-latest
+    needs: lint
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: velorastore_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd="pg_isready -U postgres -d velorastore_test"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - name: Run test suite against real Postgres
+        run: npm test
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          TEST_PGDATABASE: velorastore_test
+      - name: Run the suite a second time against the same DB (idempotency check)
+        run: npm test
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          TEST_PGDATABASE: velorastore_test
+
+  # ---------------------------------------------------------------------
+  # 3. Security & dependency scanning. Fails the build on any high/critical
+  #    known vulnerability in a production dependency.
+  # ---------------------------------------------------------------------
+  security-scan:
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - name: npm audit (fail on high/critical)
+        run: npm audit --omit=dev --audit-level=high
+      - name: Trivy filesystem scan (secrets + vulnerable deps)
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          skip-dirs: node_modules
+
+  # ---------------------------------------------------------------------
+  # 4. Kubernetes/Helm validation — lints and renders the chart, validates
+  #    the rendered manifests against the Kubernetes API schema, and scans
+  #    the manifests themselves for security misconfigurations.
+  # ---------------------------------------------------------------------
+  k8s-validate:
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+        with: { version: v3.16.4 }
+      - name: helm lint
+        run: helm lint ./helm/velora
+      - name: helm lint (staging values)
+        run: helm lint ./helm/velora -f ./helm/velora/values.yaml -f ./helm/velora/values-staging.yaml
+      - name: helm template (production) render for schema validation
+        run: |
+          helm template velora ./helm/velora \
+            --namespace velora \
+            --set image.repository=REPLACED_AT_DEPLOY \
+            --set image.tag=${{ github.sha }} \
+            > /tmp/rendered.yaml
+      - name: kubeconform schema validation
+        uses: docker://ghcr.io/yannh/kubeconform:latest
+        with:
+          args: -strict -summary /tmp/rendered.yaml
+      - name: kube-score security/best-practice check
+        uses: zegl/kube-score@v1.11.0
+        with:
+          args: /tmp/rendered.yaml
+
+  # ---------------------------------------------------------------------
+  # 5. Build & push the Docker image. Only on main — PRs get a build-only
+  #    dry run (no push) so the Dockerfile itself is still validated.
+  # ---------------------------------------------------------------------
+  build-image:
+    runs-on: ubuntu-latest
+    needs: [test, security-scan, k8s-validate]
+    outputs:
+      image_tag: ${{ steps.meta.outputs.image_tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Compute image tag
+        id: meta
+        run: echo "image_tag=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
+      - name: Configure AWS credentials
+        if: github.ref == 'refs/heads/main'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        if: github.ref == 'refs/heads/main'
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build image (PR, validate only, no push)
+        if: github.ref != 'refs/heads/main'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          tags: velora:pr-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push image (main)
+        if: github.ref == 'refs/heads/main'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ steps.ecr-login.outputs.registry }}/velora:${{ github.sha }}
+            ${{ steps.ecr-login.outputs.registry }}/velora:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Scan pushed image with Trivy
+        if: github.ref == 'refs/heads/main'
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: ${{ steps.ecr-login.outputs.registry }}/velora:${{ github.sha }}
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+
+  # ---------------------------------------------------------------------
+  # 6. Deploy to the Kubernetes cluster via Helm, wait for the rollout to
+  #    become healthy, then run smoke tests against the live endpoint.
+  #    Automatically rolls back on any failure below.
+  # ---------------------------------------------------------------------
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build-image
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+        with: { version: v3.16.4 }
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --name ${{ secrets.EKS_CLUSTER_NAME }} --region ${{ secrets.AWS_REGION }}
+
+      - name: Helm upgrade --install
+        id: helm-deploy
+        run: |
+          helm upgrade --install velora ./helm/velora \
+            --namespace velora --create-namespace \
+            --set image.repository=${{ secrets.ECR_REGISTRY }}/velora \
+            --set image.tag=${{ needs.build-image.outputs.image_tag }} \
+            --set secrets.existingSecret=velora-secrets \
+            --wait --timeout 5m \
+            --atomic
+
+      - name: Wait for rollout
+        run: kubectl -n velora rollout status deployment/velora --timeout=300s
+
+      - name: Smoke test readiness
+        run: |
+          kubectl -n velora run smoke-health --rm -i --restart=Never --image=curlimages/curl:8.10.1 -- \
+            curl -sf --retry 10 --retry-delay 5 --retry-connrefused http://velora.velora.svc.cluster.local/api/health
+
+      - name: Smoke test liveness
+        run: |
+          kubectl -n velora run smoke-live --rm -i --restart=Never --image=curlimages/curl:8.10.1 -- \
+            curl -sf http://velora.velora.svc.cluster.local/api/live
+
+      - name: Smoke test rate limiting is active
+        run: |
+          kubectl -n velora run smoke-ratelimit --rm -i --restart=Never --image=curlimages/curl:8.10.1 -- \
+            sh -c 'for i in $(seq 1 35); do curl -s -o /dev/null -w "%{http_code}\n" -X POST http://velora.velora.svc.cluster.local/api/auth/login -H "content-type: application/json" -d "{\"email\":\"smoke@test.local\",\"password\":\"wrong\"}"; done | grep -q 429'
+
+      - name: Roll back on failure
+        if: failure() && steps.helm-deploy.outcome == 'success'
+        run: helm rollback velora --namespace velora --wait

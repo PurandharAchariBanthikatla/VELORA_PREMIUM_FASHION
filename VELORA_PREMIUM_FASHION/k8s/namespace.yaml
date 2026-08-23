@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: velora
+  labels:
+    app.kubernetes.io/name: velora
+    app.kubernetes.io/managed-by: kubectl

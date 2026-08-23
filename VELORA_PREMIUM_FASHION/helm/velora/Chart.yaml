@@ -1,0 +1,16 @@
+apiVersion: v2
+name: velora
+description: VELORA — Premium Fashion & Lifestyle e-commerce platform (Express + PostgreSQL)
+type: application
+version: 1.0.0
+appVersion: "3.0.0"
+keywords:
+  - ecommerce
+  - nodejs
+  - express
+  - postgresql
+maintainers:
+  - name: VELORA Engineering
+home: https://github.com/velora/velora-store
+sources:
+  - https://github.com/velora/velora-store
