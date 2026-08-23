@@ -47,7 +47,7 @@ spec:
             readOnlyRootFilesystem: true
             capabilities:
               drop: ["ALL"]
-          image: "123456789012.dkr.ecr.ap-south-1.amazonaws.com/velora:v1.0.0"
+          image: "517293881035.dkr.ecr.eu-west-2.amazonaws.com/velora:latest"
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
