@@ -10,18 +10,16 @@ metadata:
     app.kubernetes.io/version: "3.0.0"
     app.kubernetes.io/managed-by: Helm
   annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-prod
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
-    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80},{"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:eu-west-2:517293881035:certificate/66839996-2818-47b3-89dc-52c9ec2e108d
 spec:
-  ingressClassName: nginx
-  tls:
-    - hosts:
-        - "shop.example.com"
-      secretName: velora-tls
+  ingressClassName: alb
   rules:
-    - host: "shop.example.com"
+    - host: velora.purandhardevops.online
       http:
         paths:
           - path: /
