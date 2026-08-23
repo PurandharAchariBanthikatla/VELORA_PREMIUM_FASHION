@@ -20,5 +20,6 @@ data:
   AWS_REGION: "ap-south-1"
   S3_BUCKET: "velora-product-media"
   S3_PUBLIC_BASE_URL: "https://cdn.example.com"
+  SMTP_HOST: "smtp.gmail.com"
   SMTP_PORT: "587"
-  SMTP_FROM: "VELORA <no-reply@example.com>"
+  SMTP_FROM: "VELORA <purandharacharibanthikatla@gmail.com>"
