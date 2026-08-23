@@ -25,6 +25,9 @@ COPY package.json ./
 COPY backend ./backend
 COPY frontend ./frontend
 
+# Generate backend/data/products.json during Docker image build
+RUN npm run build
+
 RUN addgroup -S velora && adduser -S velora -G velora && chown -R velora:velora /app
 USER velora
 
