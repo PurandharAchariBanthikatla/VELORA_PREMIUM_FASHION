@@ -4,18 +4,24 @@
  * Loaded as a plain <script> (not a module) so one file works from both
  * /frontend and /frontend/admin without relative-import path juggling.
  */
+
 window.Velora = (function () {
   const API_BASE = window.VELORA_API_BASE || "";
 
   // Keep CSRF token in memory only.
-  // The server-side velora_csrf cookie is sent automatically with credentials: "include".
+  // The server-side velora_csrf cookie is sent automatically
+  // with credentials: "include".
   let csrfToken = "";
 
-  async function ensureCsrf() {
-    if (csrfToken) return csrfToken;
+  async function ensureCsrf(forceRefresh = false) {
+    if (csrfToken && !forceRefresh) {
+      return csrfToken;
+    }
 
     const response = await fetch(`${API_BASE}/api/csrf`, {
-      credentials: "include"
+      method: "GET",
+      credentials: "include",
+      cache: "no-store"
     });
 
     if (!response.ok) {
@@ -67,16 +73,21 @@ window.Velora = (function () {
     }, 3200);
   }
 
-  // ---- Session storage ----
+  // ------------------------------------------------------------
+  // Session storage
+  // ------------------------------------------------------------
 
   const auth = {
-    getAccessToken: () => localStorage.getItem("veloraToken"),
+    getAccessToken: () =>
+      localStorage.getItem("veloraToken"),
 
     getRefreshToken: () =>
       localStorage.getItem("veloraRefreshToken"),
 
     getUser: () =>
-      JSON.parse(localStorage.getItem("veloraUser") || "null"),
+      JSON.parse(
+        localStorage.getItem("veloraUser") || "null"
+      ),
 
     setSession({ token, refreshToken, user }) {
       if (token) {
@@ -115,7 +126,9 @@ window.Velora = (function () {
 
   let refreshPromise = null;
 
-  // ---- Raw API request ----
+  // ------------------------------------------------------------
+  // Raw API request
+  // ------------------------------------------------------------
 
   async function rawFetch(path, options = {}) {
     const response = await fetch(`${API_BASE}${path}`, {
@@ -137,7 +150,9 @@ window.Velora = (function () {
     };
   }
 
-  // ---- Refresh authentication session ----
+  // ------------------------------------------------------------
+  // Refresh authentication session
+  // ------------------------------------------------------------
 
   async function tryRefresh() {
     const refreshToken = auth.getRefreshToken();
@@ -180,16 +195,10 @@ window.Velora = (function () {
     return true;
   }
 
-  /**
-   * Core API client.
-   *
-   * Automatically:
-   * - sends cookies
-   * - sends access token
-   * - obtains CSRF token for mutating requests
-   * - sends X-CSRF-Token
-   * - refreshes expired access tokens once
-   */
+  // ------------------------------------------------------------
+  // Core API client
+  // ------------------------------------------------------------
+
   async function api(path, options = {}) {
     const {
       skipAuth,
@@ -198,20 +207,19 @@ window.Velora = (function () {
       ...rest
     } = options;
 
-    const token = auth.getAccessToken();
-
     const buildHeaders = async () => {
       const requestHeaders = {
         "Content-Type": "application/json"
       };
+
+      const token = auth.getAccessToken();
 
       if (token && !skipAuth) {
         requestHeaders.Authorization =
           `Bearer ${token}`;
       }
 
-      // Every mutating authenticated/public API request
-      // must include the CSRF token.
+      // All mutating requests require CSRF.
       if (
         !skipAuth &&
         rest.method &&
@@ -241,8 +249,11 @@ window.Velora = (function () {
         : undefined
     });
 
+    // ----------------------------------------------------------
     // Access token expired.
     // Refresh once and retry.
+    // ----------------------------------------------------------
+
     if (
       response.status === 401 &&
       !skipAuth &&
@@ -278,11 +289,64 @@ window.Velora = (function () {
       } else {
         onSessionExpired();
       }
+
     } else if (
       response.status === 401 &&
       !skipAuth
     ) {
       onSessionExpired();
+    }
+
+    // ----------------------------------------------------------
+    // CSRF token may have become stale.
+    // Refresh CSRF once and retry the mutating request.
+    // ----------------------------------------------------------
+
+    if (
+      response.status === 403 &&
+      !skipAuth &&
+      rest.method &&
+      rest.method !== "GET" &&
+      rest.method !== "HEAD" &&
+      data &&
+      typeof data.message === "string" &&
+      data.message.toLowerCase().includes("csrf")
+    ) {
+      try {
+        const freshCsrfToken =
+          await ensureCsrf(true);
+
+        const retryHeaders = {
+          "Content-Type": "application/json",
+
+          "X-CSRF-Token":
+            freshCsrfToken,
+
+          ...(auth.getAccessToken() && !skipAuth
+            ? {
+                Authorization:
+                  `Bearer ${auth.getAccessToken()}`
+              }
+            : {}),
+
+          ...(headers || {})
+        };
+
+        ({
+          response,
+          data
+        } = await rawFetch(path, {
+          ...rest,
+
+          headers: retryHeaders,
+
+          body: body
+            ? JSON.stringify(body)
+            : undefined
+        }));
+      } catch (csrfError) {
+        throw csrfError;
+      }
     }
 
     if (!response.ok) {
@@ -295,7 +359,9 @@ window.Velora = (function () {
     return data;
   }
 
-  // ---- Safety net for page reveal ----
+  // ------------------------------------------------------------
+  // Safety net for page reveal
+  // ------------------------------------------------------------
 
   function ensurePageReveal() {
     if (!document.getElementById("loader")) {
@@ -312,7 +378,9 @@ window.Velora = (function () {
     ensurePageReveal();
   }
 
-  // ---- Scroll reveal ----
+  // ------------------------------------------------------------
+  // Scroll reveal
+  // ------------------------------------------------------------
 
   function initScrollReveal() {
     const targets =
@@ -366,7 +434,9 @@ window.Velora = (function () {
     initScrollReveal();
   }
 
-  // ---- Animated number count-up ----
+  // ------------------------------------------------------------
+  // Animated number count-up
+  // ------------------------------------------------------------
 
   function animateCount(
     el,
@@ -427,7 +497,9 @@ window.Velora = (function () {
     window.requestAnimationFrame(tick);
   }
 
-  // ---- Modal helper ----
+  // ------------------------------------------------------------
+  // Modal helper
+  // ------------------------------------------------------------
 
   function openModal(innerHtml) {
     closeModal();
@@ -470,7 +542,9 @@ window.Velora = (function () {
       ?.remove();
   }
 
-  // ---- Authenticated file download ----
+  // ------------------------------------------------------------
+  // Authenticated file download
+  // ------------------------------------------------------------
 
   async function downloadFile(
     path,
