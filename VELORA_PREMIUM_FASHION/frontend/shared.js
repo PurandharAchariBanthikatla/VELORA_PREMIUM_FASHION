@@ -6,8 +6,33 @@
  */
 window.Velora = (function () {
   const API_BASE = window.VELORA_API_BASE || "";
-  let csrfToken = localStorage.getItem('veloraCsrf') || '';
-  async function ensureCsrf() { if (csrfToken) return csrfToken; const r = await fetch(`${API_BASE}/api/csrf`); const d = await r.json(); csrfToken=d.csrfToken; localStorage.setItem('veloraCsrf', csrfToken); return csrfToken; }
+  let csrfToken = "";
+
+  async function ensureCsrf(forceRefresh = false) {
+    if (csrfToken && !forceRefresh) {
+      return csrfToken;
+    }
+
+    const r = await fetch(`${API_BASE}/api/csrf`, {
+      method: "GET",
+      credentials: "include",
+      cache: "no-store"
+    });
+
+    if (!r.ok) {
+      throw new Error("Unable to obtain CSRF token");
+    }
+
+    const d = await r.json();
+
+    if (!d.csrfToken) {
+      throw new Error("CSRF token was not returned by the server");
+    }
+
+    csrfToken = d.csrfToken;
+
+    return csrfToken;
+  }
 
   function money(value) {
     return new Intl.NumberFormat("en-IN", {
@@ -68,7 +93,10 @@ window.Velora = (function () {
   let refreshPromise = null;
 
   async function rawFetch(path, options) {
-    const response = await fetch(`${API_BASE}${path}`, options);
+    const response = await fetch(`${API_BASE}${path}`, {
+      credentials: "include",
+      ...options
+    });
     let data = {};
     try {
       data = await response.json();
