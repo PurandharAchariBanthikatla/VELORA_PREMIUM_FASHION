@@ -8,28 +8,24 @@ window.Velora = (function () {
   const API_BASE = window.VELORA_API_BASE || "";
   let csrfToken = "";
 
-  async function ensureCsrf(forceRefresh = false) {
-    if (csrfToken && !forceRefresh) {
-      return csrfToken;
-    }
-
-    const r = await fetch(`${API_BASE}/api/csrf`, {
+  async function ensureCsrf() {
+    const response = await fetch(`${API_BASE}/api/csrf`, {
       method: "GET",
       credentials: "include",
       cache: "no-store"
     });
 
-    if (!r.ok) {
+    if (!response.ok) {
       throw new Error("Unable to obtain CSRF token");
     }
 
-    const d = await r.json();
+    const data = await response.json();
 
-    if (!d.csrfToken) {
+    if (!data.csrfToken) {
       throw new Error("CSRF token was not returned by the server");
     }
 
-    csrfToken = d.csrfToken;
+    csrfToken = data.csrfToken;
 
     return csrfToken;
   }
@@ -140,7 +136,7 @@ window.Velora = (function () {
     const buildHeaders = async () => ({
       "Content-Type": "application/json",
       ...(token && !skipAuth ? { Authorization: `Bearer ${token}` } : {}),
-      ...(!skipAuth && rest.method && rest.method !== 'GET' ? { 'X-CSRF-Token': await ensureCsrf() } : {}),
+      ...(rest.method && rest.method !== 'GET' ? { 'X-CSRF-Token': await ensureCsrf() } : {}),
       ...(headers || {})
     });
 
