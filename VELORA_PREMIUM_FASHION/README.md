@@ -12,7 +12,6 @@ by a real Express API with JWT authentication and persisted data.
 > "VELORA" is this project's own storefront brand — replace the catalog data with your
 > real inventory before using this as an actual production storefront.
 
-## What's included
 
 **Customer-facing**
 - Product catalog with search, category filters, and sorting (`frontend/index.html`)
